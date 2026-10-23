@@ -150,7 +150,6 @@ namespace LR1.ViewModel
 
                             ListPerson[ListPerson.IndexOf(p)] = p.CopyFromPersonDPO(personDpo);
 
-                            ListPersonDpo.Add(personDpo);
                         }
                     }, (obj) => SelectedPersonDpo != null && ListPersonDpo.Count > 0));
             }
