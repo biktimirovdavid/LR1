@@ -8,11 +8,11 @@ namespace LR1.Model
         public int RoleId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public DateTime Birthday { get; set; }
+        public string Birthday { get; set; }
 
         public Person() { }
 
-        public Person(int id, int roleId, string firstName, string lastName, DateTime birthday)
+        public Person(int id, int roleId, string firstName, string lastName, string birthday)
         {
             this.Id = id;
             this.RoleId = roleId;
@@ -24,7 +24,7 @@ namespace LR1.Model
         /// <summary>
         /// Копирование данных из PersonDpo 
         /// </summary>
-        public Person CopyFromPersonDPO(PersonDpo personDpo)
+        public Person CopyFromPersonDpo(PersonDpo personDpo)
         {
             Person p = new Person();
             p.Id = personDpo.Id;

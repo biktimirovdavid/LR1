@@ -1,7 +1,10 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Newtonsoft.Json;
 using LR1.Helper;
 using LR1.Model;
 using LR1.View;
@@ -10,75 +13,52 @@ namespace LR1.ViewModel
 {
     public class RoleViewModel : INotifyPropertyChanged
     {
+        readonly string path = @"C:\Users\David\source\repos\LR1\DataModels\RoleData.json";
+
+        /// <summary>
+        /// коллекция должностей сотрудников
+        /// </summary>
+        public ObservableCollection<Role> ListRole { get; set; } = new ObservableCollection<Role>();
+
         /// <summary>
         /// выбранная в списке должность
         /// </summary>
-        private Role selectedRole;
+        private Role _selectedRole;
         /// <summary>
         /// выбранная в списке должность
         /// </summary>
         public Role SelectedRole
         {
-            get { return selectedRole; }
+            get
+            {
+                return _selectedRole;
+            }
             set
             {
-                selectedRole = value;
+                _selectedRole = value;
                 OnPropertyChanged("SelectedRole");
                 EditRole.CanExecute(true);
             }
         }
 
-        /// <summary>
-        /// коллекция должностей сотрудников
-        /// </summary>
+        public string Error { get; set; }
 
-        private static ObservableCollection<Role> _listRole;
+        string _jsonRoles = String.Empty;
 
-        public ObservableCollection<Role> ListRole
+        public RoleViewModel()
         {
-            get { return _listRole; }
-            set
-            {
-                _listRole = value;
-                OnPropertyChanged("ListRole");
-            }
+            ListRole = LoadRole();
         }
 
-        static RoleViewModel()
-        {
-            _listRole = new ObservableCollection<Role>();
-            _listRole.Add(new Role { Id = 1, NameRole = "Директор" });
-            _listRole.Add(new Role { Id = 2, NameRole = "Бухгалтер" });
-            _listRole.Add(new Role { Id = 3, NameRole = "Менеджер" });
-        }
-
-        public RoleViewModel() { }
-
-        /// <summary>
-        /// Нахождение максимального Id в коллекции
-        /// </summary>
-        /// <returns></returns> 
-        public int MaxId()
-        {
-            int max = 0;
-            foreach (var r in this.ListRole)
-            {
-                if (max < r.Id)
-                {
-                    max = r.Id;
-                }
-            }
-            return max;
-        }
-
-        // команда добавления новой должности
-        private RelayCommand addRole;
+        #region command AddRole
+        /// команда добавления новой должности
+        private RelayCommand _addRole;
         public RelayCommand AddRole
         {
             get
             {
-                return addRole ??
-                    (addRole = new RelayCommand(obj =>
+                return _addRole ??
+                    (_addRole = new RelayCommand(obj =>
                     {
                         WindowNewRole wnRole = new WindowNewRole
                         {
@@ -91,45 +71,52 @@ namespace LR1.ViewModel
                         if (wnRole.ShowDialog() == true)
                         {
                             ListRole.Add(role);
+                            SaveChanges(ListRole);
                             SelectedRole = role;
                         }
-                    }));
+                    },
+                    (obj) => true));
             }
         }
+        #endregion
 
-        private RelayCommand editRole;
+        #region Command EditRole
+        /// команда редактирования должности
+        private RelayCommand _editRole;
         public RelayCommand EditRole
         {
             get
             {
-                return editRole ??
-                    (editRole = new RelayCommand(obj =>
+                return _editRole ??
+                    (_editRole = new RelayCommand(obj =>
                     {
                         WindowNewRole wnRole = new WindowNewRole
                         {
                             Title = "Редактирование должности",
                         };
                         Role role = SelectedRole;
-                        Role tempRole = new Role();
-                        tempRole = role.ShallowCopy();
+                        var tempRole = role.ShallowCopy();
                         wnRole.DataContext = tempRole;
                         if (wnRole.ShowDialog() == true)
                         {
                             // сохранение данных в оперативной памяти
                             role.NameRole = tempRole.NameRole;
+                            SaveChanges(ListRole);
                         }
-                    },
-                    (obj) => SelectedRole != null && ListRole.Count > 0));
+                    }, (obj) => SelectedRole != null && ListRole.Count > 0));
             }
         }
+        #endregion
 
-        private RelayCommand deleteRole;
+        #region DeleteRole
+        /// команда удаления должности
+        private RelayCommand _deleteRole;
         public RelayCommand DeleteRole
         {
             get
             {
-                return deleteRole ??
-                    (deleteRole = new RelayCommand(obj =>
+                return _deleteRole ??
+                    (_deleteRole = new RelayCommand(obj =>
                     {
                         Role role = SelectedRole;
                         MessageBoxResult result = MessageBox.Show("Удалить данные по должности: " + role.NameRole,
@@ -137,14 +124,72 @@ namespace LR1.ViewModel
                         if (result == MessageBoxResult.OK)
                         {
                             ListRole.Remove(role);
+                            SaveChanges(ListRole);
                         }
-                    },
-                    (obj) => SelectedRole != null && ListRole.Count > 0));
+                    }, (obj) => SelectedRole != null && ListRole.Count > 0));
+            }
+        }
+        #endregion
+
+        #region Methods
+        /// <summary>
+        /// загрузка json файла и дессериализация данных для коллекции должностей ListRole
+        /// </summary>
+        /// <returns></returns>
+        public ObservableCollection<Role> LoadRole()
+        {
+            _jsonRoles = File.ReadAllText(path);
+            if (_jsonRoles != null)
+            {
+                ListRole = JsonConvert.DeserializeObject<ObservableCollection<Role>>(_jsonRoles);
+                return ListRole;
+            }
+            else
+            {
+                return null;
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        /// <summary>
+        /// Нахождение максимального Id в коллекции
+        /// </summary>
+        /// <returns></returns>
+        public int MaxId()
+        {
+            int max = 0;
+            foreach (var r in this.ListRole)
+            {
+                if (max < r.Id)
+                {
+                    max = r.Id;
+                }
+                ;
+            }
+            return max;
+        }
 
+        /// <summary>
+        /// Сохранение json-строки с данными по должностям в файл
+        /// </summary>
+        /// <param name="listRole"></param>
+        private void SaveChanges(ObservableCollection<Role> listRole)
+        {
+            var jsonRole = JsonConvert.SerializeObject(listRole, Formatting.Indented);
+            try
+            {
+                using (StreamWriter writer = File.CreateText(path))
+                {
+                    writer.Write(jsonRole);
+                }
+            }
+            catch (IOException e)
+            {
+                Error = "Ошибка записи json файла /n" + e.Message;
+            }
+        }
+        #endregion
+
+        public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

@@ -69,11 +69,11 @@ namespace LR1.Model
         /// <summary>
         /// дата рождения сотрудника
         /// </summary>
-        private DateTime birthday;
+        private string birthday;
         /// <summary>
         /// дата рождения сотрудника
         /// </summary>
-        public DateTime Birthday
+        public string Birthday
         {
             get { return birthday; }
             set
@@ -85,7 +85,7 @@ namespace LR1.Model
 
         public PersonDpo() { }
 
-        public PersonDpo(int id, string roleName, string firstName, string lastName, DateTime birthday)
+        public PersonDpo(int id, string roleName, string firstName, string lastName, string birthday)
         {
             this.Id = id;
             this.RoleName = roleName;
@@ -127,6 +127,19 @@ namespace LR1.Model
             perDpo.LastName = person.LastName;
             perDpo.Birthday = person.Birthday;
             return perDpo;
+        }
+
+        /// <summary>
+        /// приведение даты рождения к виду дд.мм.гггг
+        /// </summary>
+        public static string GetStringBirthday(string birthday)
+        {
+            DateTime date;
+            if (DateTime.TryParse(birthday, out date))
+            {
+                return date.ToString("dd.MM.yyyy");
+            }
+            return birthday;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
